@@ -10,11 +10,18 @@ model_client = boto3.client('lexv2-models')
 bot_runtime = boto3.client('lexv2-runtime')
 
 
-def get_bot_version_latest_version() -> str:
+def version_check(data: dict, status_check: bool = False) -> bool:
+    if status_check:
+        return data.get('botVersion', '').isnumeric() and data.get('botStatus', 'NOPE') == "Available"
+    return data.get('botVersion', '').isnumeric()
+
+
+def get_bot_version_latest_version(status_check: bool = False) -> str:
     data = model_client.list_bot_versions(botId=config.bot_id)
     bot_version_summaries = data.get('botVersionSummaries')
+    # print(f"Bot versions: {bot_version_summaries}")
     return sorted(list(
-        filter(lambda d: d.get('botVersion', '').isnumeric() and d.get('botSatus', 'NOPE') == "Available",
+        filter(lambda d: version_check(d, status_check),
                bot_version_summaries)),
         key=lambda d: d.get('creationDateTime'), reverse=True)[0].get('botVersion')
 
@@ -22,7 +29,7 @@ def get_bot_version_latest_version() -> str:
 def get_bot_intents() -> List[dict]:
     response = model_client.list_intents(
         botId=config.bot_id,
-        botVersion=get_bot_version_latest_version(),
+        botVersion=get_bot_version_latest_version(status_check=True),
         localeId=config.locale_Id
     )
 
@@ -37,7 +44,7 @@ def get_intent_info(intent_id: str) -> dict:
     data = model_client.describe_intent(
         intentId=intent_id,
         botId=config.bot_id,
-        botVersion=get_bot_version_latest_version(),
+        botVersion=get_bot_version_latest_version(status_check=True),
         localeId=config.locale_Id
     )
 
@@ -52,14 +59,21 @@ def get_intent_info(intent_id: str) -> dict:
 
 
 def get_response_message_from_bot(session_id: str, text: str) -> str:
+    try:
+        return _recognize_text(session_id, text, config.bot_alias_id)
+    except Exception as ex:
+        print(f"Failed to send text, sending previous version model: {ex}")
+        return _recognize_text(session_id, text, config.bot_previous_alias_id)
+
+
+def _recognize_text(session_id, text, bot_alias_id):
     resp = bot_runtime.recognize_text(
         botId=config.bot_id,
-        botAliasId=config.bot_alias_id,
+        botAliasId=bot_alias_id,
         localeId=config.locale_Id,
         sessionId=session_id,
         text=text
     )
-
     # FIXME: proper dict access and check
     return resp.get('messages')[0]['content']
 
@@ -88,11 +102,17 @@ def _create_bot_version():
     return resp
 
 
-def _update_to_latest_alias():
+def _update_alias_version(alias_id: str, alias_name: str, bot_version: str):
+    print(f"Updating bot alias, alias_name={alias_name}, bot_version={bot_version}")
     model_client.update_bot_alias(
-        botAliasId=config.bot_alias_id,
-        botAliasName='latest',
-        botVersion=get_bot_version_latest_version(),
+        botAliasId=alias_id,
+        botAliasName=alias_name,
+        botVersion=bot_version,
+        botAliasLocaleSettings={
+            config.locale_Id: {
+                'enabled': True
+            }
+        },
         sentimentAnalysisSettings={
             'detectSentiment': False
         },
@@ -106,8 +126,11 @@ def build_and_deploy():
     time.sleep(1.5)
     _create_bot_version()
     time.sleep(1.5)
-    _update_to_latest_alias()
-    time.sleep(1.5)
+    bot_version = get_bot_version_latest_version()
+
+    _update_alias_version(config.bot_alias_id, 'latest', bot_version)
+    _update_alias_version(config.bot_previous_alias_id, 'previous', str(int(bot_version) - 1))
+    time.sleep(2)
 
 
 def create_intent(intent_info: CreateIntent):
@@ -144,3 +167,4 @@ def delete_intent(intent_id: str):
         localeId=config.locale_Id
     )
     build_and_deploy()
+    return "Successfully deleted intent"

@@ -6,7 +6,7 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 5
+    Timeout: 10
     Tracing: Active
     Handler: app.lambda_handler
     Runtime: python3.9
@@ -21,11 +21,11 @@ Globals:
 Resources:
   # core layer with python functions
   CoreLayer:
-      Type: AWS::Serverless::LayerVersion
-      Properties:
-        ContentUri: core
-        CompatibleRuntimes:
-          - python3.9
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: core
+      CompatibleRuntimes:
+        - python3.9
   # dependencies layer with requirements.txt
   DependenciesLayer:
     Type: AWS::Serverless::LayerVersion
@@ -92,6 +92,22 @@ Resources:
             Method: get
             RestApiId:
               Ref: ChatBotApiGateway
+  DeleteIntentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/DeleteIntent
+      Timeout: 15
+      Policies:
+        - AmazonLexFullAccess
+        - AWSLambdaBasicExecutionRole
+      Events:
+        DeleteIntent:
+          Type: Api
+          Properties:
+            Path: /intents/{intent_id}
+            Method: delete
+            RestApiId:
+              Ref: ChatBotApiGateway
   ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -115,7 +131,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/CreateIntent
-      Timeout: 10
+      Timeout: 15
       Policies:
         - AmazonLexFullAccess
         - AWSLambdaBasicExecutionRole
