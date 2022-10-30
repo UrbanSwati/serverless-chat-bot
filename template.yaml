@@ -1,17 +1,22 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  serverless-chat-bot
-
-  Sample SAM Template for serverless-chat-bot
+  Serverless Chat Bot 
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 3
     Tracing: Active
+    Handler: app.lambda_handler
+    Runtime: python3.9
+    Architectures:
+      - x86_64
+    Layers:
+      - !Ref CoreLayer
+      - !Ref DependenciesLayer
   Api:
-    TracingEnabled: True
+    TracingEnabled: False
 
 Resources:
   # core layer with python functions
@@ -30,37 +35,74 @@ Resources:
         - python3.9
     Metadata:
       BuildMethod: python3.9
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+  # Rest endpoints
+  ChatBotApiGateway:
+    Type: AWS::Serverless::Api
     Properties:
-      CodeUri: hello_world/
-      Handler: app.lambda_handler
-      Runtime: python3.9
-      Layers:
-      - !Ref CoreLayer
-      - !Ref DependenciesLayer
-      Architectures:
-        - x86_64
+      StageName: Prod
+      Models:
+        ChatModel:
+          type: object
+          required:
+            - session_id
+            - text
+          properties:
+            session_id:
+              type: string
+            text:
+              type: string
+  GetIntentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/GetIntents
+      Policies:
+        - AmazonLexFullAccess
+        - AWSLambdaBasicExecutionRole
       Events:
-        HelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+        GetIntents:
+          Type: Api
           Properties:
-            Path: /hello
+            Path: /intents
             Method: get
+            RestApiId:
+              Ref: ChatBotApiGateway
+        GetIntentInfo:
+          Type: Api
+          Properties:
+            Path: /intents/{intent_id}
+            Method: get
+            RestApiId:
+              Ref: ChatBotApiGateway
+  ChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/Chat
+      Policies:
+        - AmazonLexFullAccess
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Chat:
+          Type: Api
+          Properties:
+            Path: /chat
+            Method: post
+            RestApiId:
+              Ref: ChatBotApiGateway
+            RequestModel:
+              Model: ChatModel
+              Required: true
+              ValidateBody: true
 
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorldApi:
-    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+  BaseApiUrl:
+    Description: "API Gateway base URL for Prod stage for serverless-chat-bot"
+    Value: !Sub "https://${ChatBotApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  GetIntentsFunctionArn:
+    Description: "GetIntentsFunction Function ARN"
+    Value: !GetAtt GetIntentsFunction.Arn
+  ChatFunctionArn:
+    Description: "ChatFunctionArn Function ARN"
+    Value: !GetAtt ChatFunction.Arn
   CoreLayerArn:
     Description: "Common function Layer"
     Value: !Ref CoreLayer
@@ -68,6 +110,6 @@ Outputs:
       Name: !Sub '${AWS::StackName}-CoreLayerArn'
   DependenciesLayer:
     Description: "Layer containing following libraries: boto3[1.25.1]"
-    Value: !Ref LibLayer
+    Value: !Ref DependenciesLayer
     Export:
       Name: !Sub '${AWS::StackName}-DependenciesLayer'
