@@ -6,7 +6,7 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 5
     Tracing: Active
     Handler: app.lambda_handler
     Runtime: python3.9
@@ -51,6 +51,25 @@ Resources:
               type: string
             text:
               type: string
+        CreateIntentModel:
+          type: object
+          required:
+            - name
+            - description
+            - utterances
+            - response_message
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            response_message:
+              type: string
+            utterances:
+              type: array
+              items:
+                type: string
+
   GetIntentsFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -90,6 +109,26 @@ Resources:
               Ref: ChatBotApiGateway
             RequestModel:
               Model: ChatModel
+              Required: true
+              ValidateBody: true
+  CreatIntentFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/CreateIntent
+      Timeout: 10
+      Policies:
+        - AmazonLexFullAccess
+        - AWSLambdaBasicExecutionRole
+      Events:
+        Chat:
+          Type: Api
+          Properties:
+            Path: /intents
+            Method: post
+            RestApiId:
+              Ref: ChatBotApiGateway
+            RequestModel:
+              Model: CreateIntentModel
               Required: true
               ValidateBody: true
 

@@ -14,3 +14,7 @@ class IntentInfo(BaseModel):
     utterances: List[str]
     response_message: str
 
+
+class CreateIntent(IntentInfo):
+    name: str
+    description: Optional[str] = ""
