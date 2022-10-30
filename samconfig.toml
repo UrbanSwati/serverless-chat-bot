@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "serverless-chat-bot"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1jy57mfa50gky"
+s3_prefix = "serverless-chat-bot"
+region = "eu-west-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+image_repositories = []
