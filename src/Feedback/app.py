@@ -1,6 +1,6 @@
 import json
 
-from common_function import get_response_message_from_bot
+from common_function import create_session_feedback
 
 
 def lambda_handler(event, context):
@@ -13,6 +13,6 @@ def lambda_handler(event, context):
             "Access-Control-Allow-Origin": '*'
         },
         "body": json.dumps({
-            "data": get_response_message_from_bot(session_id=payload.get('session_id'), text_msg=payload.get('text'))
+            "data": create_session_feedback(session_id=payload.get('session_id'), is_helpful=payload.get('is_helpful'))
         }),
     }

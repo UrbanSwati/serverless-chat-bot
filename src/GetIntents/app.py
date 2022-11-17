@@ -10,6 +10,7 @@ def lambda_handler(event, context):
             "statusCode": 200,
             "headers": {
                 "content-type": "application/json",
+                "Access-Control-Allow-Origin": '*'
             },
             "body": json.dumps({
                 "data": get_intent_info(intent_id)
@@ -20,6 +21,7 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "headers": {
             "content-type": "application/json",
+            "Access-Control-Allow-Origin": '*'
         },
         "body": json.dumps({
             "data": get_bot_intents()

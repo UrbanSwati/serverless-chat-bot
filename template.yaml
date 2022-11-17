@@ -40,7 +40,21 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: Prod
+      Cors: 
+        AllowHeaders: "'*'"
+        AllowMethods: "'*'"
+        AllowOrigin: "'*'"
       Models:
+        FeedbackModel:
+          type: object
+          required:
+            - session_id
+            - is_helpful
+          properties:
+            session_id:
+              type: string
+            is_helpful:
+              type: boolean
         ChatModel:
           type: object
           required:
@@ -108,6 +122,22 @@ Resources:
             Method: delete
             RestApiId:
               Ref: ChatBotApiGateway
+  UpdateIntentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/UpdateIntent
+      Timeout: 15
+      Policies:
+        - AmazonLexFullAccess
+        - AWSLambdaBasicExecutionRole
+      Events:
+        DeleteIntent:
+          Type: Api
+          Properties:
+            Path: /intents/{intent_id}
+            Method: put
+            RestApiId:
+              Ref: ChatBotApiGateway
   ChatFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -145,6 +175,23 @@ Resources:
               Ref: ChatBotApiGateway
             RequestModel:
               Model: CreateIntentModel
+              Required: true
+              ValidateBody: true
+  FeedbackFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/Feedback
+      Timeout: 15
+      Events:
+        DeleteIntent:
+          Type: Api
+          Properties:
+            Path: /feedback
+            Method: post
+            RestApiId:
+              Ref: ChatBotApiGateway
+            RequestModel:
+              Model: FeedbackModel
               Required: true
               ValidateBody: true
 

@@ -12,6 +12,7 @@ def lambda_handler(event, context):
         "statusCode": 200,
         "headers": {
             "content-type": "application/json",
+            "Access-Control-Allow-Origin": '*'
         },
         "body": json.dumps({
             "data": "Successfully created Intent"

@@ -5,6 +5,13 @@ import boto3 as boto3
 
 from configuration import config
 from models import Intent, IntentInfo, CreateIntent
+from sqlalchemy import create_engine, text
+
+from sql_queries import insert_chat_record, insert_feedback
+
+engine = create_engine(
+    f'postgresql://{config.database_username}:{config.database_password}@{config.database_host}/{config.database_name}',
+    echo=True)
 
 model_client = boto3.client('lexv2-models')
 bot_runtime = boto3.client('lexv2-runtime')
@@ -58,12 +65,24 @@ def get_intent_info(intent_id: str) -> dict:
     return IntentInfo(utterances=utterances, response_message=response_message).dict()
 
 
-def get_response_message_from_bot(session_id: str, text: str) -> str:
+def get_response_message_from_bot(session_id: str, text_msg: str) -> str:
+    # bot_response = "Sorry, something wrong happened, can you please repeat?"
     try:
-        return _recognize_text(session_id, text, config.bot_alias_id)
+        bot_response = _recognize_text(session_id, text_msg, config.bot_alias_id)
     except Exception as ex:
         print(f"Failed to send text, sending previous version model: {ex}")
-        return _recognize_text(session_id, text, config.bot_previous_alias_id)
+        bot_response = _recognize_text(session_id, text_msg, config.bot_previous_alias_id)
+
+    with engine.connect() as conn:
+        insert_chat_record(conn, text_msg, bot_response, session_id)
+
+    return bot_response
+
+
+def create_session_feedback(session_id: str, is_helpful: bool):
+    with engine.connect() as conn:
+        insert_feedback(conn, session_id, is_helpful)
+    return "Feedback created."
 
 
 def _recognize_text(session_id, text, bot_alias_id):
@@ -135,6 +154,33 @@ def build_and_deploy():
 
 def create_intent(intent_info: CreateIntent):
     create_intent_response = model_client.create_intent(
+        intentName=intent_info.name,
+        description=intent_info.description,
+        botId=config.bot_id,
+        botVersion='DRAFT',
+        localeId=config.locale_Id,
+        sampleUtterances=[{'utterance': utterance_text} for utterance_text in intent_info.utterances],
+        initialResponseSetting={
+            'initialResponse': {
+                'messageGroups': [
+                    {
+                        'message': {
+                            'plainTextMessage': {
+                                'value': intent_info.response_message
+                            }
+                        }
+                    },
+                ],
+                'allowInterrupt': True
+            }
+        }
+    )
+    build_and_deploy()
+
+
+def update_intent(intent_info: CreateIntent, intent_id: str):
+    model_client.update_intent(
+        intentId=intent_id,
         intentName=intent_info.name,
         description=intent_info.description,
         botId=config.bot_id,

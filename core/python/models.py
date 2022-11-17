@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, List, Any
 
 from pydantic.fields import Field
@@ -18,3 +19,21 @@ class IntentInfo(BaseModel):
 class CreateIntent(IntentInfo):
     name: str
     description: Optional[str] = ""
+
+
+class Chat(BaseModel):
+    id: int
+    created_at: datetime
+    text_message: str
+    session_id: int
+
+
+class Feedback(BaseModel):
+    id: int
+    is_helpful: bool
+    session_id: int
+
+
+class ChatSession(BaseModel):
+    id: int
+    session_uuid: str
