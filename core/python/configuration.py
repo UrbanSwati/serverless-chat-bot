@@ -8,5 +8,10 @@ class Settings(BaseSettings):
     locale_Id: str = "en_GB"
     draft_version_name: str = "Draft version"
 
+    database_name: str
+    database_host: str
+    database_username: str
+    database_password: str
+
 
 config = Settings()
