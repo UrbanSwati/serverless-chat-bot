@@ -32,8 +32,10 @@ class Feedback(BaseModel):
     id: int
     is_helpful: bool
     session_id: int
+    created_at: datetime
 
 
 class ChatSession(BaseModel):
     id: int
     session_uuid: str
+    created_at: datetime

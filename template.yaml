@@ -220,6 +220,19 @@ Resources:
             Method: get
             RestApiId:
               Ref: ChatBotApiGateway
+  OverralSessionStatsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/GetSessionStats
+      Timeout: 15
+      Events:
+        GetSessionStats:
+          Type: Api
+          Properties:
+            Path: /stats/session
+            Method: get
+            RestApiId:
+              Ref: ChatBotApiGateway
 
 Outputs:
   BaseApiUrl:

@@ -1,5 +1,26 @@
-from configuration import engine
 from sqlalchemy import text
+
+from configuration import engine
+from models import ChatSession, Feedback
+
+MONTHS = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
+
+
+def _set_data(data, key, value):
+    data[key] = value
 
 
 def get_count_stats():
@@ -29,3 +50,53 @@ FROM (SELECT COUNT(DISTINCT id) as positive FROM feedback WHERE is_helpful is TR
         data = conn.execute(text(sql_query)).one()
 
     return dict(data._mapping)
+
+
+def get_user_session_stats(year: int):
+    with engine.connect() as conn:
+        session_stats = _get_session_stats(conn, year)
+        positive_feedback_stats, negative_feedback_stats = _get_feedback_for_stats(conn, year)
+
+    return {
+        'session': session_stats,
+        'positive_feedback': positive_feedback_stats,
+        'negative_feedback': negative_feedback_stats
+    }
+
+
+def _get_session_stats(conn, year: int) -> dict:
+    data = conn.execute(text("SELECT * FROM session WHERE date_part('year', created_at) = :year"), year=year)
+
+    chat_sessions = [ChatSession(**dict(row)) for row in data]
+
+    # Set all months to 0
+    month_sessions = {}
+    [_set_data(month_sessions, i, 0) for i in MONTHS]
+
+    for session in chat_sessions:
+        for month in MONTHS:
+            if session.created_at.strftime("%B") == month:
+                month_sessions[month] = month_sessions[month] + 1
+
+    return month_sessions
+
+
+def _get_feedback_for_stats(conn, year: int) -> tuple[dict, dict]:
+    data = conn.execute(text("SELECT * FROM feedback WHERE date_part('year', created_at) = :year"), year=year)
+
+    # Set all months to 0
+    monthly_positive_feedback = {}
+    monthly_negative_feedback = {}
+    [_set_data(monthly_positive_feedback, i, 0) for i in MONTHS]
+    [_set_data(monthly_negative_feedback, i, 0) for i in MONTHS]
+
+    chat_feedback = [Feedback(**dict(row)) for row in data]
+    for feedback in chat_feedback:
+        for month in MONTHS:
+            if feedback.created_at.strftime("%B") == month:
+                if feedback.is_helpful:
+                    monthly_positive_feedback[month] = monthly_positive_feedback[month] + 1
+                else:
+                    monthly_negative_feedback[month] = monthly_negative_feedback[month] + 1
+
+    return monthly_positive_feedback, monthly_negative_feedback
