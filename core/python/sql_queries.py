@@ -7,10 +7,10 @@ def insert_chat_record(conn, text_message: str, bot_response: str, session_uuid:
     created_at = datetime.utcnow()
 
     session_sql_text = """
-    INSERT INTO session (session_uuid)
-    VALUES (:uuid) ON CONFLICT DO NOTHING
+    INSERT INTO session (session_uuid, created_at)
+    VALUES (:uuid, :created_at) ON CONFLICT DO NOTHING
     """
-    conn.execute(text(session_sql_text), uuid=session_uuid)
+    conn.execute(text(session_sql_text), uuid=session_uuid, created_at=created_at)
 
     chat_sql_text = """
     INSERT INTO chat (text_message, created_at, bot_response, session_id)

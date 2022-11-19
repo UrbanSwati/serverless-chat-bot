@@ -3,15 +3,9 @@ from typing import List
 
 import boto3 as boto3
 
-from configuration import config
+from configuration import config, engine
 from models import Intent, IntentInfo, CreateIntent
-from sqlalchemy import create_engine, text
-
 from sql_queries import insert_chat_record, insert_feedback
-
-engine = create_engine(
-    f'postgresql://{config.database_username}:{config.database_password}@{config.database_host}/{config.database_name}',
-    echo=True)
 
 model_client = boto3.client('lexv2-models')
 bot_runtime = boto3.client('lexv2-runtime')

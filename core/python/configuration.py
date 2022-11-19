@@ -1,4 +1,5 @@
 from pydantic.env_settings import BaseSettings
+from sqlalchemy import create_engine
 
 
 class Settings(BaseSettings):
@@ -15,3 +16,7 @@ class Settings(BaseSettings):
 
 
 config = Settings()
+
+engine = create_engine(
+    f'postgresql://{config.database_username}:{config.database_password}@{config.database_host}/{config.database_name}',
+    echo=True)

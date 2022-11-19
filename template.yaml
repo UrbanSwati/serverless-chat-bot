@@ -194,6 +194,19 @@ Resources:
               Model: FeedbackModel
               Required: true
               ValidateBody: true
+  StatsCountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/StatsCount
+      Timeout: 15
+      Events:
+        DeleteIntent:
+          Type: Api
+          Properties:
+            Path: /statscount
+            Method: get
+            RestApiId:
+              Ref: ChatBotApiGateway
 
 Outputs:
   BaseApiUrl:
