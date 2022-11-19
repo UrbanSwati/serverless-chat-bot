@@ -131,7 +131,7 @@ Resources:
         - AmazonLexFullAccess
         - AWSLambdaBasicExecutionRole
       Events:
-        DeleteIntent:
+        PutIntent:
           Type: Api
           Properties:
             Path: /intents/{intent_id}
@@ -146,7 +146,7 @@ Resources:
         - AmazonLexFullAccess
         - AWSLambdaBasicExecutionRole
       Events:
-        Chat:
+        PostChat:
           Type: Api
           Properties:
             Path: /chat
@@ -166,7 +166,7 @@ Resources:
         - AmazonLexFullAccess
         - AWSLambdaBasicExecutionRole
       Events:
-        Chat:
+        PostIntent:
           Type: Api
           Properties:
             Path: /intents
@@ -183,7 +183,7 @@ Resources:
       CodeUri: src/Feedback
       Timeout: 15
       Events:
-        DeleteIntent:
+        PostFeedback:
           Type: Api
           Properties:
             Path: /feedback
@@ -200,10 +200,23 @@ Resources:
       CodeUri: src/StatsCount
       Timeout: 15
       Events:
-        DeleteIntent:
+        GetStatsCount:
           Type: Api
           Properties:
-            Path: /statscount
+            Path: /stats/count
+            Method: get
+            RestApiId:
+              Ref: ChatBotApiGateway
+  FeedbackStatsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/GetFeedbackStats
+      Timeout: 15
+      Events:
+        GetFeedback:
+          Type: Api
+          Properties:
+            Path: /stats/feedback
             Method: get
             RestApiId:
               Ref: ChatBotApiGateway
